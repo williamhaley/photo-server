@@ -1,0 +1,214 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body {
+  background-color: purple;
+  color: hotpink;
+}
+#scroller {
+  border: 2px solid forestgreen;
+  position: relative;
+}
+#top {
+  background: red;
+  height: 1px;
+  width: 100%;
+  position: absolute;
+  top: 0;
+}
+#bottom {
+  background: red;
+  height: 1px;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+}
+.item {
+  border: 2px solid navy;
+  font-size: 2em;
+  height: 42px;
+  box-sizing: border-box;
+}
+.sentinel {
+  border: 2px solid lime;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+<div id="scroller1"></div>
+<div id="scroller2"></div>
+
+<script>
+class DataSource {
+  constructor(data) {
+    this.data = data;
+  }
+
+  count() {
+    return this.data.length;
+  }
+
+  heightForCell() {
+    return 42;
+  }
+
+  render(index, $existingElement) {
+    let $cell;
+    if (!$existingElement) {
+      $cell = document.createElement('div');
+      $cell.classList.add('item');
+      $cell.appendChild(document.createTextNode(''));
+    } else {
+      $cell = $existingElement;
+    }
+
+    $cell.dataset.index = index;
+    const record = this.data[index];
+    $cell.textContent = `Item: ${record.id} ${record.text}`;
+    return $cell;
+  }
+}
+
+class Scroller {
+  constructor(dataSource, $root) {
+    this.dataSource = dataSource;
+
+    this.gap = 0;
+
+    this.$root = $root;
+    this.$cells = [];
+
+    this.$wrapper = document.createElement('div');
+    this.$wrapper.style.transform = 'translateY(0px)';
+    this.$root.appendChild(this.$wrapper);
+
+    this.$topSentinel = document.createElement('div');
+    this.$bottomSentinel = document.createElement('div');
+
+    this.intersectionObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.target === this.$topSentinel) {
+          this.handleTopSentinel(entry);
+        }
+        if (entry.target === this.$bottomSentinel) {
+          this.handleBottomSentinel(entry);
+        }
+      });
+    });
+
+    this.intersectionObserver.observe(this.$topSentinel);
+    this.intersectionObserver.observe(this.$bottomSentinel);
+  }
+
+  handleTopSentinel(entry) {
+    if (!entry.isIntersecting) {
+      return;
+    }
+
+    // Get the position of the sentinel.
+    const virtualHeight = entry.target.offsetTop + this.gap;
+    const totalHeight = this.dataSource.heightForCell() * this.dataSource.count();
+    // Note we -1 on the end, which we don't do while scrolling down.
+    const canonicalIndex = Math.floor(virtualHeight / this.dataSource.heightForCell()) - 1;
+
+    // Figure out how many cells we can load. If we're at the start, load no more!
+    const numToTrim = Math.min(this.numVisibleCells(), canonicalIndex);
+
+    this.gap -= numToTrim * this.dataSource.heightForCell();
+    this.$wrapper.style.transform = `translateY(${this.gap}px)`;
+
+    for (let index = 0; index < numToTrim; index++) {
+      let $cell = this.$cells.pop();
+      $cell.remove();
+      $cell = this.dataSource.render(canonicalIndex - index, $cell);
+      this.$wrapper.prepend($cell);
+      this.$cells.unshift($cell);
+    }
+
+    this.$topSentinel.remove();
+    this.$wrapper.prepend(this.$topSentinel);
+    this.$bottomSentinel.remove();
+    this.$wrapper.appendChild(this.$bottomSentinel);
+  }
+
+  handleBottomSentinel(entry) {
+    if (!entry.isIntersecting) {
+      return;
+    }
+
+    // Get the position of the sentinel.
+    const virtualHeight = entry.target.offsetTop + this.gap;
+    const totalHeight = this.dataSource.heightForCell() * this.dataSource.count();
+    const canonicalIndex = Math.floor(virtualHeight / this.dataSource.heightForCell());
+
+    console.log(virtualHeight, totalHeight, canonicalIndex);
+
+    // Figure out how many cells we can load. If we're at the end, load no more!
+    const numToTrim = Math.min(this.numVisibleCells(), this.dataSource.count() - canonicalIndex);
+    // This is the cell that *won't* be trimmed. Fix it's position so things
+    // don't re-position when we remove the cells above it.
+    const $newMinimumCell = this.$cells[numToTrim];
+    this.gap += $newMinimumCell.offsetTop;
+    this.$wrapper.style.transform = `translateY(${this.gap}px)`;
+
+    for (let index = 0; index < numToTrim; index++) {
+      let $cell = this.$cells.shift();
+      $cell.remove();
+      $cell = this.dataSource.render(canonicalIndex + index, $cell);
+      this.$wrapper.appendChild($cell);
+      this.$cells.push($cell);
+    }
+
+    this.$topSentinel.remove();
+    this.$wrapper.prepend(this.$topSentinel);
+    this.$bottomSentinel.remove();
+    this.$wrapper.appendChild(this.$bottomSentinel);
+  }
+
+  // Figure out how many cells could be visible all at once.
+  numVisibleCells() {
+    // TODO WFH window.innerHeight is close enough for now.
+    return Math.floor(window.innerHeight / this.dataSource.heightForCell());
+  }
+
+  runwayCell() {
+    const $cell = document.createElement('div');
+    $cell.classList.add('runway', 'item');
+    $cell.appendChild(document.createTextNode('RUNWAY'));
+    return $cell;
+  }
+
+  render() {
+    this.$root.style.height = `${this.dataSource.heightForCell() * this.dataSource.count()}px`;
+
+    for (let index = 0; index < this.numVisibleCells() * 3; index++) {
+      const $cell = this.dataSource.render(index, null);
+      this.$cells.push($cell);
+      this.$wrapper.appendChild($cell);
+    }
+
+    this.$bottomSentinel.remove();
+    this.$wrapper.appendChild(this.$bottomSentinel);
+  }
+}
+
+const dataSource1 = new DataSource([...new Array(1000)].map((item, index) => {
+  return { id: index, text: `DS1 this is cell... ${index}` };
+}));
+const scroller1 = new Scroller(dataSource1, document.getElementById('scroller1'));
+scroller1.render();
+
+const dataSource2 = new DataSource([...new Array(1000)].map((item, index) => {
+  return { id: index, text: `DS2 this is cell... ${index}` };
+}));
+const scroller2 = new Scroller(dataSource2, document.getElementById('scroller2'));
+scroller2.render();
+
+window.addEventListener('scroll', (event) => {
+  console.log('scroll');
+});
+</script>
+</body>
+</html>

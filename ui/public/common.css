@@ -1,0 +1,127 @@
+:root {
+  --colorPrimary: rgb(4, 35, 121);
+}
+
+body {
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  color: var(--colorPrimary);
+}
+
+h2 {
+  position: sticky;
+  top: 0;
+  background-color: #eee;
+  padding: 1em 0.5em;
+  z-index: 100;
+  border: solid var(--colorPrimary);
+  border-width: 0 2px 2px 2px;
+}
+
+.masonry {
+  /*
+    Prevent the page from auto-scrolling to fit new content. This is a _bit_
+    odd to think about. If the page is auto-loading new content and then inserting
+    it, but the content is prepended above the 50% mark, browsers will auto scroll
+    to keep the perspective so the new content is always above the fold. This can
+    be weird because we then short-circuit any infinite-loading mechanism. Maybe
+    that's ideal, but it can be funky.
+
+    Even better would be to load enough content or otherwise control the
+    experience so that we aren't at the mercy of the loading sentinel being on
+    screen.
+  */
+  overflow-anchor: none;
+}
+
+.media {
+  object-fit: contain;
+  flex-grow: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.pending {
+  min-height: 100px;
+  width: 100%;
+  animation-duration: 3s;
+  animation-name: pulse;
+  animation-iteration-count: infinite;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+}
+
+/*
+I found that doing a "shimmer" CSS effect for a placeholder can be CPU intensive
+on a large enough scale. I probably just haven't found a reasonable
+implementation yet. The one I tried was animating left to right with a huge fake
+margin, and I think that was a problem. The color pulse seems more manageable.
+*/
+@keyframes pulse {
+  0% {
+    background-color: #eee;
+  }
+  50% {
+    background-color: #ddd;
+  }
+  100% {
+    background-color: #eee;
+  }
+}
+
+@media screen and (min-width: 900px) {
+  h2 {
+    width: 40%;
+  }
+
+  /* https://css-tricks.com/a-grid-of-logos-in-squares/ */
+
+  .media {
+    margin: none;
+    width: auto;
+  }
+
+  .masonry {
+    /* display: flex;
+    flex-flow: row wrap;
+    margin-left: -8px; /* Adjustment for the gutter */
+    /*width: 100%; */
+    grid-template-columns: repeat(auto-fill, minmax(20%, 1fr));
+    display: grid;
+    grid-gap: 1rem;
+  }
+
+  .masonry-brick {
+    min-height: 3em;
+    padding: 0rem;
+    background-color: #eee;
+    display: grid;
+    position: relative;
+  }
+
+  .masonry-brick {
+    padding: 1rem;
+  }
+
+  .masonry-brick img {
+    position: absolute;
+    z-index: 50;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .masonry-brick::before {
+    content: "";
+    padding-bottom: 100%;
+    display: block;
+  }
+
+  .masonry-brick::before,
+  .masonry-brick > *:first-child {
+    grid-area: 1 / 1 / 2 / 2;
+  }
+}

@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+<style>
+body {
+  background-color: purple;
+  color: hotpink;
+}
+#scroller {
+  border: 2px solid forestgreen;
+  position: relative;
+}
+#top {
+  background: red;
+  height: 1px;
+  width: 100%;
+  position: absolute;
+  top: 0;
+}
+#bottom {
+  background: red;
+  height: 1px;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+}
+.item {
+  border: 2px solid navy;
+  font-size: 2em;
+  height: 42px;
+  box-sizing: border-box;
+}
+.sentinel {
+  border: 2px solid lime;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+<div id="scroller1"></div>
+<div id="scroller2"></div>
+
+<script>
+class DataSource {
+  constructor(data) {
+    this.data = data;
+  }
+
+  count() {
+    return this.data.length;
+  }
+
+  heightForCell() {
+    return 42;
+  }
+
+  render(index, $existingElement) {
+    let $cell;
+    if (!$existingElement) {
+      $cell = document.createElement('div');
+      $cell.classList.add('item');
+      $cell.appendChild(document.createTextNode(''));
+    } else {
+      $cell = $existingElement;
+    }
+
+    $cell.dataset.index = index;
+    const record = this.data[index];
+    $cell.textContent = `Item: ${record.id} ${record.text}`;
+    return $cell;
+  }
+}
+
+class Loader {
+  constructor(dataSource, $root) {
+    this.dataSource = dataSource;
+
+    this.$root = $root;
+    this.start = 0;
+
+    this.$placeholder = document.createElement('div');
+    this.$placeholder.textContent = 'PLACEHOLDER';
+    this.$placeholder.classList.add('item', 'placeholder');
+
+    this.$wrapper = document.createElement('div');
+    this.$root.appendChild(this.$wrapper);
+    this.$root.appendChild(this.$placeholder);
+
+    this.$bottomSentinel = document.createElement('div');
+
+    this.intersectionObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.target === this.$bottomSentinel) {
+          this.handleBottomSentinel(entry);
+        }
+      });
+    });
+
+    // Track for both so we have an optimized load but also an explicit load if
+    // we overscroll and return later.
+    this.intersectionObserver.observe(this.$bottomSentinel);
+    this.intersectionObserver.observe(this.$placeholder);
+  }
+
+  handleBottomSentinel(entry) {
+    if (!entry.isIntersecting) {
+      return;
+    }
+
+    this.render();
+  }
+
+  render() {
+    if (this.isLoading) {
+      return;
+    }
+
+    this.$bottomSentinel.remove();
+
+    this.isLoading = true;
+
+    setTimeout(() => {
+      console.log('loaded...');
+      // pretend we load a batch of 20.
+      for (let index = this.start; index < this.start + 20; index++) {
+        const $cell = this.dataSource.render(index, null);
+        if (index % 15 === 0) {
+          this.$wrapper.appendChild(this.$bottomSentinel);
+        }
+        this.$wrapper.appendChild($cell);
+      }
+      this.start += 20;
+
+      this.isLoading = false;
+    }, 2000);
+  }
+}
+
+const dataSource1 = new DataSource([...new Array(1000)].map((item, index) => {
+  return { id: index, text: `DS1 this is cell... ${index}` };
+}));
+const loader1 = new Loader(dataSource1, document.getElementById('scroller1'));
+loader1.render();
+
+const dataSource2 = new DataSource([...new Array(1000)].map((item, index) => {
+  return { id: index, text: `DS1 this is cell... ${index}` };
+}));
+const loader2 = new Loader(dataSource2, document.getElementById('scroller1'));
+loader2.render();
+
+window.addEventListener('scroll', (event) => {
+  console.log('scroll');
+});
+</script>
+</body>
+</html>
