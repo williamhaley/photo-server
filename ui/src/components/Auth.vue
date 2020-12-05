@@ -50,6 +50,10 @@ export default {
   align-items: center;
 }
 
+h1 {
+  text-align: center;
+}
+
 form > div {
   margin-bottom: 1em;
 }

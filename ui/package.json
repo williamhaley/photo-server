@@ -5,12 +5,15 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build --dest ../static/",
+    "watch": "vue-cli-service build --dest ../static/ --watch",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
     "caniuse-lite": "^1.0.30001161",
     "core-js": "^3.6.5",
-    "vue": "^2.6.11"
+    "vue": "^2.6.11",
+    "vue-virtual-scroller": "^1.0.10",
+    "vuex": "^3.6.0"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^4.5.9",

@@ -16,15 +16,16 @@
       <div v-else v-cloak>
         <Shortcuts class="shortcuts" v-bind:buckets="buckets" />
 
-        <GroupedBuckets v-bind:buckets="buckets">
-          <template v-slot="{ bucket }">
+        <div v-for="grouping in groupings" v-bind:key="grouping">
+          <div v-bind:id="grouping"></div>
+          <div v-for="bucket in bucketsByGroupings[grouping].buckets" v-bind:key="bucket.id">
             <Photos v-bind:bucket="bucket">
               <template v-slot="{ photo }">
                 <Thumbnail v-bind:photo="photo" />
               </template>
             </Photos>
-          </template>
-        </GroupedBuckets>
+          </div>
+        </div>
       </div>
 
       <PhotoModal v-if="modalPhoto" v-bind:photo="modalPhoto" />
@@ -39,7 +40,6 @@
 import Vuex from 'vuex';
 import Auth from './components/Auth';
 import DOMObservers from './components/DOMObservers';
-import GroupedBuckets from './components/GroupedBuckets.vue';
 import PhotoModal from './components/PhotoModal';
 import Photos from './components/Photos';
 import Shortcuts from './components/Shortcuts.vue';
@@ -52,7 +52,6 @@ export default {
   components: {
     Auth,
     DOMObservers,
-    GroupedBuckets,
     PhotoModal,
     Photos,
     Shortcuts,
@@ -81,6 +80,25 @@ export default {
       modalPhoto: state => state.modalPhoto,
       isAuthenticated: state => state.isAuthenticated,
       apiClient: state => state.apiClient,
+      groupings: function () {
+        return [...new Set(this.buckets.map(b => b.grouping))]
+      },
+      bucketsByGroupings: function () {
+        return this.buckets.reduce((memo, next) => {
+          const existing = memo[next.grouping] || { grouping: next.grouping, buckets: [] };
+
+          return {
+            ...memo,
+            [next.grouping]: {
+              ...existing,
+              buckets: [
+                ...existing.buckets,
+                next,
+              ],
+            },
+          };
+        }, {});
+      },
     }),
   },
 
