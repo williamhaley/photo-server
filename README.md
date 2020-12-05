@@ -4,6 +4,14 @@ Personal photo server. Scans a directory tree for photos, stores references to t
 
 **Put an image here**
 
+# Limitations
+
+* Only works with jpg/jpeg files
+* The DB is clobbered every time photos are re-indexed
+* The UI is very simple (**broken**) right now and the UX can be greatly improved
+* If the DB is re-indexed, UUIDs are re-generated so all thumbnails are orphaned. Delete them and re-generate.
+* No meaningful authentication or administration interface
+
 # Usage
 
 ## Index
@@ -111,6 +119,25 @@ Serve the photos web interface over HTTP.
 
                       Port number to serve over HTTP.
                       Optional. Defaults to 8080.
+                      If -https-port is provided, all HTTP
+                      traffic will redirect to the HTTPS port.
+
+-https-port           number
+
+                      Port number to serve over HTTPS.
+                      Optional. Not used by default.
+                      If -https-port is provided, all HTTP
+                      traffic will redirect to the HTTPS port.
+
+-https-cert-file      /path/to/cert.pem
+
+                      Path where HTTPS certificate can be found.
+                      Optional unless -https-port is provided.
+
+-https-cert-key       /path/to/key.pem
+
+                      Path where HTTPS certificate key can be found.
+                      Optional unless -https-port is provided.
 ```
 
 ### Example
@@ -120,15 +147,25 @@ go run main.go serve \
   -photos-directory ~/photo-server-data/FamilyPhotos \
   -database ~/photo-server-data/photos.db \
   -thumbnails-directory ~/photo-server-data/thumbs \
-  -http-port 8080
+  -http-port 8080 \
+  -https-port 9090 \
+  -https-cert-file ~/photo-server-data/cert.pem \
+  -https-cert-key ~/photo-server-data/key.pem
 ```
 
-# Limitations
+# TLS/HTTPS Certificates
 
-* Only works with jpg/jpeg files
-* The DB is clobbered every time photos are re-indexed
-* The UI is very simple right now and the UX can be greatly improved
-* If the DB is re-indexed, UUIDs are re-generated so all thumbnails are orphaned. Delete them and re-generate.
+Assuming `certbot` is installed, and port `80` is already configured to redirect to port `8080` for the app, a certificate can be obtained like so.
+
+```
+sudo certbot certonly --standalone --http-01-port 8080
+```
+
+Locally, this can be run to generate certificates for testing.
+
+```
+openssl req -nodes -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+```
 
 # Thumbnails
 

@@ -3,16 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/williamhaley/photo-server/datasource"
 	"github.com/williamhaley/photo-server/indexer"
 	"github.com/williamhaley/photo-server/server"
 	"github.com/williamhaley/photo-server/thumbnail"
-	"os"
 )
 
 var errorInvalidThumbnailDirectory = fmt.Errorf("'-thumbnails-directory path' must reference a valid directory")
 var errorInvalidDatabasePath = fmt.Errorf("'-database path' must be defined")
+var errorInvalidCertFilePath = fmt.Errorf("'-https-cert-file path' must be defined when using HTTPS")
+var errorInvalidCertKeyPath = fmt.Errorf("'-https-cert-key path' must be defined when using HTTPS")
 
 func init() {
 	log.SetLevel(log.DebugLevel)
@@ -61,11 +64,22 @@ func main() {
 		photosDirectoryRootPath := serveCommand.String("photos-directory", ".", "Root directory for all photos")
 		thumbnailsDirectoryPath := serveCommand.String("thumbnails-directory", "", "Directory to use for thumbnail")
 		httpPort := serveCommand.String("http-port", "8080", "Port to server the app over HTTP")
+		httpsPort := serveCommand.String("https-port", "", "Port to server the app over HTTPS")
+		httpsCertFilePath := serveCommand.String("https-cert-file", "", "Path where HTTPS certificate can be found")
+		httpsCertKeyPath := serveCommand.String("https-cert-key", "", "Path where HTTPS certificate key can be found")
 		dbPath := serveCommand.String("database", "", "Path to database file")
 
 		serveCommand.Parse(os.Args[2:])
 
-		err := serve(os.ExpandEnv(*dbPath), os.ExpandEnv(*photosDirectoryRootPath), os.ExpandEnv(*thumbnailsDirectoryPath), *httpPort)
+		err := serve(
+			os.ExpandEnv(*dbPath),
+			os.ExpandEnv(*photosDirectoryRootPath),
+			os.ExpandEnv(*thumbnailsDirectoryPath),
+			*httpPort,
+			*httpsPort,
+			os.ExpandEnv(*httpsCertFilePath),
+			os.ExpandEnv(*httpsCertKeyPath),
+		)
 		if err != nil {
 			fmt.Println(err)
 			fmt.Println()
@@ -120,7 +134,15 @@ func thumbnails(dbPath, photosDirectoryRootPath, thumbnailsDirectoryPath string,
 	return nil
 }
 
-func serve(dbPath, photosDirectoryRootPath, thumbnailsDirectoryPath, httpPort string) error {
+func serve(
+	dbPath,
+	photosDirectoryRootPath,
+	thumbnailsDirectoryPath,
+	httpPort,
+	httpsPort,
+	httpsCertFilePath,
+	httpsCertKeyPath string,
+) error {
 	if err := validateThumbnailConfig(thumbnailsDirectoryPath); err != nil {
 		return err
 	}
@@ -129,11 +151,27 @@ func serve(dbPath, photosDirectoryRootPath, thumbnailsDirectoryPath, httpPort st
 	}
 	db := datasource.New(datasource.MustOpen(dbPath))
 
-	log.Infof("starting http server on port %q", httpPort)
+	isUsingHTTPS := httpsPort != ""
+	if isUsingHTTPS {
+		if httpsCertFilePath == "" {
+			return errorInvalidCertFilePath
+		}
+		if httpsCertKeyPath == "" {
+			return errorInvalidCertKeyPath
+		}
+	}
 
 	thumbnailManager := thumbnail.NewManager(db, photosDirectoryRootPath, thumbnailsDirectoryPath)
 
-	server := server.New(db, photosDirectoryRootPath, thumbnailManager, httpPort)
+	server := server.New(
+		db,
+		photosDirectoryRootPath,
+		thumbnailManager,
+		httpPort,
+		httpsPort,
+		httpsCertFilePath,
+		httpsCertKeyPath,
+	)
 	return server.Start()
 }
 

@@ -2,6 +2,11 @@ package server
 
 import (
 	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"path/filepath"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
@@ -9,9 +14,6 @@ import (
 	"github.com/williamhaley/photo-server/api"
 	"github.com/williamhaley/photo-server/datasource"
 	"github.com/williamhaley/photo-server/thumbnail"
-	"net/http"
-	"os"
-	"path/filepath"
 )
 
 // Server is the API/backend for serving photos over the web.
@@ -21,26 +23,40 @@ type Server struct {
 	photosDirectoryRootPath string
 	thumbnailManager        *thumbnail.Manager
 	httpPort                string
+	httpsPort               string
+	httpsCertFilePath       string
+	httpsCertKeyPath        string
 }
 
 // New allocates a new instance of the server.
-func New(db *datasource.Database, photosDirectoryRootPath string, thumbnailManager *thumbnail.Manager, httpPort string) *Server {
+func New(
+	db *datasource.Database,
+	photosDirectoryRootPath string,
+	thumbnailManager *thumbnail.Manager,
+	httpPort,
+	httpsPort,
+	httpsCertFilePath,
+	httpsCertKeyPath string,
+) *Server {
 	return &Server{
 		db:                      db,
 		api:                     api.New(db),
 		photosDirectoryRootPath: photosDirectoryRootPath,
 		thumbnailManager:        thumbnailManager,
 		httpPort:                httpPort,
+		httpsPort:               httpsPort,
+		httpsCertFilePath:       httpsCertFilePath,
+		httpsCertKeyPath:        httpsCertKeyPath,
 	}
 }
 
 // Start initializes the server so it starts listening for connections.
 func (s *Server) Start() error {
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.RedirectSlashes)
-	r.Use(middleware.Compress(5))
-	r.Use(cors.Handler(cors.Options{
+	appRouter := chi.NewRouter()
+	appRouter.Use(middleware.Logger)
+	appRouter.Use(middleware.RedirectSlashes)
+	appRouter.Use(middleware.Compress(5))
+	appRouter.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
@@ -54,15 +70,65 @@ func (s *Server) Start() error {
 	log.Infof("serving static files from %q", filesDir)
 	fs := http.FileServer(http.Dir(filesDir))
 
-	r.Post("/login", s.LogIn)
-	r.Route("/api", func(rg chi.Router) {
+	appRouter.Post("/login", s.LogIn)
+	appRouter.Route("/api", func(rg chi.Router) {
 		rg.Use(TokenMiddleware)
 		rg.Get("/buckets/counts", s.BucketCounts)
 		rg.Get("/buckets/{id}", s.PhotosForBucket)
 	})
-	r.Get("/thumbnail/{uuid}.*", s.ThumbnailHandler)
-	r.Get("/full/{uuid}.*", s.FullImageHandler)
-	r.Get("/*", s.wildcardHandler(fs))
+	appRouter.Get("/thumbnail/{uuid}.*", s.ThumbnailHandler)
+	appRouter.Get("/full/{uuid}.*", s.FullImageHandler)
+	appRouter.Get("/*", s.wildcardHandler(fs))
 
-	return http.ListenAndServe(fmt.Sprintf(":%s", s.httpPort), r)
+	isUsingHTTPS := s.httpsPort != ""
+	if isUsingHTTPS {
+		return s.serveHTTPS(appRouter)
+	}
+	return s.serveHTTP(appRouter)
+}
+
+func (s *Server) serveHTTP(appRouter http.Handler) error {
+	httpAddress := fmt.Sprintf(":%s", s.httpPort)
+
+	log.Infof("starting http server on %q", httpAddress)
+
+	httpServer := http.Server{
+		Addr:    httpAddress,
+		Handler: appRouter,
+	}
+	return httpServer.ListenAndServe()
+}
+
+func (s *Server) serveHTTPS(appRouter http.Handler) error {
+	httpsAddress := fmt.Sprintf(":%s", s.httpsPort)
+	httpAddress := fmt.Sprintf(":%s", s.httpPort)
+
+	log.Infof("starting https server on %q. http traffic on %q will redirect to https", httpsAddress, httpAddress)
+
+	httpsServer := http.Server{
+		Addr:    httpsAddress,
+		Handler: appRouter,
+	}
+
+	go func() {
+		redirectHandler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			host, _, _ := net.SplitHostPort(r.Host)
+			u := r.URL
+			u.Host = net.JoinHostPort(host, s.httpsPort)
+			u.Scheme = "https"
+			log.Info(u.String())
+			http.Redirect(rw, r, u.String(), http.StatusMovedPermanently)
+		})
+
+		httpServer := http.Server{
+			Addr:    httpAddress,
+			Handler: redirectHandler,
+		}
+
+		if err := httpServer.ListenAndServe(); err != nil {
+			log.WithError(err).Error("error serving HTTP redirect traffic")
+		}
+	}()
+
+	return httpsServer.ListenAndServeTLS(s.httpsCertFilePath, s.httpsCertKeyPath)
 }
