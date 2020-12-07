@@ -29,7 +29,6 @@ export default {
   data: function () {
     return {
       numSkeletons: 4,
-      photos: [],
       totalPhotosLoaded: 0,
       isDone: false,
       endCursor: '',
@@ -138,6 +137,9 @@ export default {
       isScrolling: state => state.isScrolling,
       apiClient: state => state.apiClient,
     }),
+    photos: function() {
+      return this.bucket.photos;
+    },
   },
 
   methods: {
@@ -217,8 +219,11 @@ export default {
       }
       const response = await this.apiClient(`api/buckets/${this.bucket.id}?${params.toString()}`);
 
-      response.photosConnection.edges.forEach(edge => {
-        this.$set(this.photos, this.photos.length, edge.node);
+      const photos = response.photosConnection.edges.map(edge => edge.node);
+
+      this.$store.commit('loadedPhotosForBucket', {
+        bucketID: this.bucket.id,
+        photos,
       });
 
       this.endCursor = response.photosConnection.pageInfo.endCursor;

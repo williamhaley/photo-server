@@ -5,7 +5,7 @@
 
       <h1>Photos</h1>
 
-      <div v-if="loading">
+      <div v-if="isLoading">
         <h2 class="pending">...</h2>
         <div class="masonry">
           <template>
@@ -45,7 +45,6 @@ import Photos from './components/Photos';
 import Shortcuts from './components/Shortcuts.vue';
 import Skeleton from './components/Skeleton.vue';
 import Thumbnail from './components/Thumbnail.vue';
-import { YearMonthBucket } from './common';
 import store from './store';
 
 export default {
@@ -61,12 +60,6 @@ export default {
 
   store,
 
-  data: function () {
-    return {
-      loading: true,
-    };
-  },
-
   watch: {
     isAuthenticated: function (isAuthenticated) {
       if (isAuthenticated) {
@@ -80,36 +73,37 @@ export default {
       modalPhoto: state => state.modalPhoto,
       isAuthenticated: state => state.isAuthenticated,
       apiClient: state => state.apiClient,
-      groupings: function () {
-        return [...new Set(this.buckets.map(b => b.grouping))]
-      },
-      bucketsByGroupings: function () {
-        return this.buckets.reduce((memo, next) => {
-          const existing = memo[next.grouping] || { grouping: next.grouping, buckets: [] };
-
-          return {
-            ...memo,
-            [next.grouping]: {
-              ...existing,
-              buckets: [
-                ...existing.buckets,
-                next,
-              ],
-            },
-          };
-        }, {});
-      },
+      isLoading: state => state.isLoading,
+      buckets: state => Object.values(state.bucketsByID),
     }),
+    groupings: function () {
+      return [...new Set((this.buckets || []).map(b => b.grouping))]
+    },
+    bucketsByGroupings: function () {
+      return (this.buckets || []).reduce((memo, next) => {
+        const existing = memo[next.grouping] || { grouping: next.grouping, buckets: [] };
+
+        return {
+          ...memo,
+          [next.grouping]: {
+            ...existing,
+            buckets: [
+              ...existing.buckets,
+              next,
+            ],
+          },
+        };
+      }, {});
+    },
   },
 
   methods: {
     loadSkeletonData: async function () {
-      const response = await this.apiClient('api/buckets/counts');
+      this.$store.commit('startLoadingDataOutline');
 
-      this.buckets = response.map(bucket => {
-        return new YearMonthBucket(`${bucket.year}-${bucket.month}`, bucket.totalCount);
-      });
-      this.loading = false;
+      const buckets = await this.apiClient('api/buckets/counts');
+
+      this.$store.commit('loadedDataOutline', buckets);
     },
   }
 };

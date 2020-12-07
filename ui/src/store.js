@@ -1,5 +1,6 @@
 import Vue from 'vue';
 import Vuex from 'vuex';
+import { YearMonthBucket } from './common';
 
 Vue.use(Vuex);
 
@@ -11,6 +12,8 @@ const store = new Vuex.Store({
     isAuthenticated: false,
     token: null,
     apiClient: null,
+    bucketsByID: {},
+    isLoading: false,
   },
   mutations: {
     setModalPhoto(state, modalPhoto) {
@@ -46,11 +49,37 @@ const store = new Vuex.Store({
         });
         const json = await res.json();
 
-        console.log(`fetched ${path} in ${(Date.now() - start) / 1000}s`);
+        console.log(`fetched ${path} in ${(Date.now() - start) / 1000}s ${JSON.stringify(json)}`);
 
         return json;
       };
-    }
+    },
+
+    startLoadingDataOutline(state) {
+      state.isLoading = true;
+      state.bucketsByID = {};
+    },
+
+    loadedDataOutline(state, buckets) {
+      const bucketsByID = {};
+
+      // The initial app load returns *all* buckets, but with no photos. Only meta data to help
+      // outline the view and set up later async data loading. These buckts are all sorted by the
+      // API when returned, so it's important we maintain that state appropriately here.
+      for (let bucketJSON of buckets) {
+        // Formalized bucket that tracks various bits of state.
+        const yearMonthBucket = new YearMonthBucket(`${bucketJSON.year}-${bucketJSON.month}`, bucketJSON.totalCount);
+
+        bucketsByID[yearMonthBucket.id] = yearMonthBucket;
+      }
+
+      state.bucketsByID = bucketsByID;
+      state.isLoading = false;
+    },
+
+    loadedPhotosForBucket(state, { bucketID, photos }) {
+      state.bucketsByID[bucketID].appendPhotos(photos);
+    },
   }
 });
 

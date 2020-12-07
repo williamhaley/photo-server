@@ -20,6 +20,7 @@ export class YearMonthBucket {
     this.year = year;
     this.month = month;
     this.totalCount = totalCount;
+    this.photos = [];
   }
 
   id() {
@@ -28,6 +29,10 @@ export class YearMonthBucket {
 
   totalCount() {
     return this.totalCount;
+  }
+
+  appendPhotos(photos) {
+    this.photos = [...this.photos, ...photos];
   }
 
   get grouping() {
