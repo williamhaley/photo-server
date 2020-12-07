@@ -4,6 +4,27 @@ import { YearMonthBucket } from './common';
 
 Vue.use(Vuex);
 
+const getAPIClient = (token) => {
+  return async (path, opts) => {
+    const start = Date.now();
+
+    const url = `${process.env.VUE_APP_ROOT_URL}${path}`;
+    const headers = new Headers();
+    headers.set('Authorization', token);
+    headers.set('Content-Type', 'application/json');
+
+    const res = await fetch(url, {
+      ...opts,
+      headers,
+    });
+    const json = await res.json();
+
+    console.log(`fetched ${path} in ${(Date.now() - start) / 1000}s ${JSON.stringify(json)}`);
+
+    return json;
+  }
+};
+
 const store = new Vuex.Store({
   state: {
     count: 0,
@@ -32,28 +53,17 @@ const store = new Vuex.Store({
       state.isScrolling = false;
     },
 
-    setAuthInfo(state, token) {
-      state.isAuthenticated = !!token;
+    logOut(state) {
+      console.log('store:logOut');
+      state.isAuthenticated = false;
+      state.token = null;
+      state.apiClient = null;
+    },
+    logIn(state, { token, apiClient }) {
+      console.log('store:logIn');
+      state.isAuthenticated = true;
       state.token = token;
-
-      state.apiClient = !state.isAuthenticated ? null : async (path, opts) => {
-        const start = Date.now();
-
-        const url = `${process.env.VUE_APP_ROOT_URL}${path}`;
-        const headers = new Headers();
-        headers.set('Authorization', token);
-        headers.set('Content-Type', 'application/json');
-
-        const res = await fetch(url, {
-          ...opts,
-          headers,
-        });
-        const json = await res.json();
-
-        console.log(`fetched ${path} in ${(Date.now() - start) / 1000}s ${JSON.stringify(json)}`);
-
-        return json;
-      };
+      state.apiClient = apiClient;
     },
 
     startLoadingDataOutline(state) {
@@ -84,13 +94,46 @@ const store = new Vuex.Store({
   },
 
   actions: {
-    loadInitialState(context) {
-      const authInfo = JSON.parse(localStorage.getItem('authInfo'));
-      context.commit('setAuthInfo', authInfo ? authInfo.token : null);
+    async loadInitialState(context) {
+      const localAuthInfo = JSON.parse(localStorage.getItem('authInfo'));
+
+      if (!localAuthInfo || !localAuthInfo.token) {
+        context.commit('logOut');
+        return;
+      }
+    
+      const apiClient = getAPIClient(localAuthInfo.token);
+      try {
+        await apiClient('profile');
+        context.commit('logIn', {
+          token: localAuthInfo.token,
+          apiClient,
+        });
+      } catch (err) {
+        localStorage.setItem('authInfo', JSON.stringify({}));
+        context.commit('logOut');
+      }
     },
-    setAuthInfo(context, token) {
+    async logIn(context, accessCode) {
+      const res = await fetch(`${process.env.VUE_APP_ROOT_URL}login`, {
+        method: 'POST',
+        body: JSON.stringify({
+          accessCode,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.error) {
+        console.error(json.error);
+        throw new Error('error logging in');
+      }
+      const token = json.token;
+      
       localStorage.setItem('authInfo', JSON.stringify({ token }));
-      context.commit('setAuthInfo', token);
+      context.commit('logIn', {
+        token,
+        apiClient: getAPIClient(token),
+      });
     },
   },
 });

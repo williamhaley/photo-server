@@ -19,19 +19,10 @@ export default {
       const formData = new FormData(event.target);
       const accessCode = formData.get('code');
 
-      const res = await fetch(`${process.env.VUE_APP_ROOT_URL}login`, {
-        method: 'POST',
-        body: JSON.stringify({
-          accessCode,
-        })
-      });
-      const json = await res.json();
-
-      if (json.error) {
-        console.error(json.error);
+      try {
+        await this.$store.dispatch('logIn', accessCode);
+      } catch (err) {
         alert('try again');
-      } else {
-        this.$store.dispatch('setAuthInfo', json.token);
       }
     },
   },

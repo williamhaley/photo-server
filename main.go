@@ -68,6 +68,8 @@ func main() {
 		httpsCertFilePath := serveCommand.String("https-cert-file", "", "Path where HTTPS certificate can be found")
 		httpsCertKeyPath := serveCommand.String("https-cert-key", "", "Path where HTTPS certificate key can be found")
 		dbPath := serveCommand.String("database", "", "Path to database file")
+		// TODO WFH Passing this here is not good, but better than the hard-coded behavior it had before.
+		accessCode := serveCommand.String("access-code", "", "Access code users will need to access the server")
 
 		serveCommand.Parse(os.Args[2:])
 
@@ -79,6 +81,7 @@ func main() {
 			*httpsPort,
 			os.ExpandEnv(*httpsCertFilePath),
 			os.ExpandEnv(*httpsCertKeyPath),
+			*accessCode,
 		)
 		if err != nil {
 			fmt.Println(err)
@@ -141,7 +144,8 @@ func serve(
 	httpPort,
 	httpsPort,
 	httpsCertFilePath,
-	httpsCertKeyPath string,
+	httpsCertKeyPath,
+	accessCode string,
 ) error {
 	if err := validateThumbnailConfig(thumbnailsDirectoryPath); err != nil {
 		return err
@@ -171,6 +175,7 @@ func serve(
 		httpsPort,
 		httpsCertFilePath,
 		httpsCertKeyPath,
+		accessCode,
 	)
 	return server.Start()
 }

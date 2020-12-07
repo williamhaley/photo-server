@@ -138,6 +138,11 @@ Serve the photos web interface over HTTP.
 
                       Path where HTTPS certificate key can be found.
                       Optional unless -https-port is provided.
+
+-access-code          string
+
+                      Private/secret code used to prevent the public from
+                      viewing photos.
 ```
 
 ### Example
@@ -150,7 +155,8 @@ go run main.go serve \
   -http-port 8080 \
   -https-port 9090 \
   -https-cert-file ~/photo-server-data/cert.pem \
-  -https-cert-key ~/photo-server-data/key.pem
+  -https-cert-key ~/photo-server-data/key.pem \
+  -access-code "password"
 ```
 
 # TLS/HTTPS Certificates

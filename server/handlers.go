@@ -2,9 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/go-chi/chi"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,6 +9,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/go-chi/chi"
+	log "github.com/sirupsen/logrus"
 )
 
 func (s *Server) LogIn(rw http.ResponseWriter, r *http.Request) {
@@ -31,8 +32,7 @@ func (s *Server) LogIn(rw http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// TODO WFH This is obviously terrible!
-	if loginData.AccessCode != "password" {
+	if loginData.AccessCode != s.accessCode {
 		rw.WriteHeader(http.StatusUnauthorized)
 		result := map[string]string{
 			"error": "access denied",
@@ -47,10 +47,10 @@ func (s *Server) LogIn(rw http.ResponseWriter, r *http.Request) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := make(jwt.MapClaims)
 	claims["foo"] = "bar"
-	claims["exp"] = time.Now().Add(time.Hour * 24 * 60).Unix()
+	claims["exp"] = time.Now().Add(time.Hour * 24 * 60).Unix() // 2 months
 	token.Claims = claims
 
-	tokenString, err := token.SignedString([]byte("my top secret key"))
+	tokenString, err := token.SignedString([]byte(s.secret))
 	if err != nil {
 		log.WithError(err).Error("error signing token")
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -59,6 +59,16 @@ func (s *Server) LogIn(rw http.ResponseWriter, r *http.Request) {
 
 	result := map[string]string{
 		"token": tokenString,
+	}
+
+	if err := json.NewEncoder(rw).Encode(result); err != nil {
+		log.WithError(err).Error("error writing response")
+	}
+}
+
+func (s *Server) Profile(rw http.ResponseWriter, r *http.Request) {
+	result := map[string]string{
+		"status": "ok",
 	}
 
 	if err := json.NewEncoder(rw).Encode(result); err != nil {

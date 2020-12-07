@@ -26,6 +26,8 @@ type Server struct {
 	httpsPort               string
 	httpsCertFilePath       string
 	httpsCertKeyPath        string
+	secret                  string
+	accessCode              string
 }
 
 // New allocates a new instance of the server.
@@ -36,7 +38,8 @@ func New(
 	httpPort,
 	httpsPort,
 	httpsCertFilePath,
-	httpsCertKeyPath string,
+	httpsCertKeyPath,
+	accessCode string,
 ) *Server {
 	return &Server{
 		db:                      db,
@@ -47,6 +50,8 @@ func New(
 		httpsPort:               httpsPort,
 		httpsCertFilePath:       httpsCertFilePath,
 		httpsCertKeyPath:        httpsCertKeyPath,
+		secret:                  accessCode, // TODO WFH not ideal
+		accessCode:              accessCode,
 	}
 }
 
@@ -70,9 +75,13 @@ func (s *Server) Start() error {
 	log.Infof("serving static files from %q", filesDir)
 	fs := http.FileServer(http.Dir(filesDir))
 
+	tokenMiddleware := TokenMiddleware(s.secret)
+
 	appRouter.Post("/login", s.LogIn)
+	appRouter.With(tokenMiddleware).Get("/profile", s.Profile)
+
 	appRouter.Route("/api", func(rg chi.Router) {
-		rg.Use(TokenMiddleware)
+		rg.Use(tokenMiddleware)
 		rg.Get("/buckets/counts", s.BucketCounts)
 		rg.Get("/buckets/{id}", s.PhotosForBucket)
 	})
