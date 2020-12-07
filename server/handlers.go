@@ -3,11 +3,13 @@ package server
 import (
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -74,6 +76,31 @@ func (s *Server) Profile(rw http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(rw).Encode(result); err != nil {
 		log.WithError(err).Error("error writing response")
 	}
+}
+
+func (s *Server) HTTPtoHTTPSRedirect(rw http.ResponseWriter, r *http.Request) {
+	// The original request having a port (like :8080) implies dev/non-prod.
+	hasPort := strings.Contains(r.Host, ":")
+
+	redirectURL := r.URL
+	redirectURL.Scheme = "https"
+
+	host := r.Host
+	if hasPort {
+		var err error
+		// Derive the original request host.
+		host, _, err = net.SplitHostPort(r.Host)
+		if err != nil {
+			log.WithError(err).Errorf("error parsing host %q for redirect", r.Host)
+		}
+		// Join the request host and the desired HTTPS port.
+		redirectURL.Host = net.JoinHostPort(host, s.httpsPort)
+	} else {
+		// The redirect host is simply the request host.
+		redirectURL.Host = r.Host
+	}
+
+	http.Redirect(rw, r, redirectURL.String(), http.StatusMovedPermanently)
 }
 
 func (s *Server) BucketCounts(rw http.ResponseWriter, r *http.Request) {

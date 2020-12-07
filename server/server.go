@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -120,18 +119,9 @@ func (s *Server) serveHTTPS(appRouter http.Handler) error {
 	}
 
 	go func() {
-		redirectHandler := http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			host, _, _ := net.SplitHostPort(r.Host)
-			u := r.URL
-			u.Host = net.JoinHostPort(host, s.httpsPort)
-			u.Scheme = "https"
-			log.Info(u.String())
-			http.Redirect(rw, r, u.String(), http.StatusMovedPermanently)
-		})
-
 		httpServer := http.Server{
 			Addr:    httpAddress,
-			Handler: redirectHandler,
+			Handler: http.HandlerFunc(s.HTTPtoHTTPSRedirect),
 		}
 
 		if err := httpServer.ListenAndServe(); err != nil {
