@@ -31,7 +31,7 @@ export default {
         console.error(json.error);
         alert('try again');
       } else {
-        this.$store.commit('setAuthInfo', json.token);
+        this.$store.dispatch('setAuthInfo', json.token);
       }
     },
   },

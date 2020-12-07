@@ -33,9 +33,10 @@ const store = new Vuex.Store({
     },
 
     setAuthInfo(state, token) {
-      state.isAuthenticated = true;
+      state.isAuthenticated = !!token;
       state.token = token;
-      state.apiClient = async (path, opts) => {
+
+      state.apiClient = !state.isAuthenticated ? null : async (path, opts) => {
         const start = Date.now();
 
         const url = `${process.env.VUE_APP_ROOT_URL}${path}`;
@@ -80,7 +81,18 @@ const store = new Vuex.Store({
     loadedPhotosForBucket(state, { bucketID, photos }) {
       state.bucketsByID[bucketID].appendPhotos(photos);
     },
-  }
+  },
+
+  actions: {
+    loadInitialState(context) {
+      const authInfo = JSON.parse(localStorage.getItem('authInfo'));
+      context.commit('setAuthInfo', authInfo ? authInfo.token : null);
+    },
+    setAuthInfo(context, token) {
+      localStorage.setItem('authInfo', JSON.stringify({ token }));
+      context.commit('setAuthInfo', token);
+    },
+  },
 });
 
 export default store;

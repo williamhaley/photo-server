@@ -68,6 +68,10 @@ export default {
     },
   },
 
+  created: function () {
+    this.$store.dispatch('loadInitialState');
+  },
+
   computed: {
     ...Vuex.mapState({
       modalPhoto: state => state.modalPhoto,
