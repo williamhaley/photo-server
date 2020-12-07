@@ -22,7 +22,7 @@ require (
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pixiv/go-libjpeg v0.0.0-20190822045933-3da21a74767d
 	github.com/sirupsen/logrus v1.7.0
-	github.com/williamhaley/goepeg v0.0.0-20201129063847-4df2600a3980
+	github.com/williamhaley/goepeg v0.0.0-20201207035158-2b7cce8e5e4f
 	github.com/williamhaley/gothumb v0.0.0-20201121035830-9a6db7556e69
 	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8
 	google.golang.org/appengine v1.6.7 // indirect

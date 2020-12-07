@@ -116,6 +116,8 @@ github.com/williamhaley/goepeg v0.0.0-20201129063539-56d0ad66f37a h1:lJqjMEtOmpV
 github.com/williamhaley/goepeg v0.0.0-20201129063539-56d0ad66f37a/go.mod h1:STSR3rQCSdvqI+QPjifrcsPYq77JhdYDey1tQV7hXts=
 github.com/williamhaley/goepeg v0.0.0-20201129063847-4df2600a3980 h1:7g0RxVyNcd9wwV61d3js/0YFOgh+vC+6ORviPq29Yog=
 github.com/williamhaley/goepeg v0.0.0-20201129063847-4df2600a3980/go.mod h1:STSR3rQCSdvqI+QPjifrcsPYq77JhdYDey1tQV7hXts=
+github.com/williamhaley/goepeg v0.0.0-20201207035158-2b7cce8e5e4f h1:Lpz/OMWBG6EgwUtL++QkgMeBoMWburDDcbGHKldLjoA=
+github.com/williamhaley/goepeg v0.0.0-20201207035158-2b7cce8e5e4f/go.mod h1:STSR3rQCSdvqI+QPjifrcsPYq77JhdYDey1tQV7hXts=
 github.com/williamhaley/gothumb v0.0.0-20201121035830-9a6db7556e69 h1:I6LdlgFP8XrbuPtvHrp7ExdoASIWz4qx/ICdu/uqoXA=
 github.com/williamhaley/gothumb v0.0.0-20201121035830-9a6db7556e69/go.mod h1:IWFKyo+oRCWnXJFM3Ko77ON7a0heqd0VdFkPhW1Vavk=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
