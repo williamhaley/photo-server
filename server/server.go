@@ -3,8 +3,6 @@ package server
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -27,6 +25,7 @@ type Server struct {
 	httpsCertKeyPath        string
 	secret                  string
 	accessCode              string
+	staticFileSystem        http.FileSystem
 }
 
 // New allocates a new instance of the server.
@@ -39,6 +38,7 @@ func New(
 	httpsCertFilePath,
 	httpsCertKeyPath,
 	accessCode string,
+	staticFileSystem http.FileSystem,
 ) *Server {
 	return &Server{
 		db:                      db,
@@ -51,6 +51,7 @@ func New(
 		httpsCertKeyPath:        httpsCertKeyPath,
 		secret:                  accessCode, // TODO WFH not ideal
 		accessCode:              accessCode,
+		staticFileSystem:        staticFileSystem,
 	}
 }
 
@@ -69,11 +70,6 @@ func (s *Server) Start() error {
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
 
-	workDir, _ := os.Getwd()
-	filesDir := http.Dir(filepath.Join(workDir, "static"))
-	log.Infof("serving static files from %q", filesDir)
-	fs := http.FileServer(http.Dir(filesDir))
-
 	tokenMiddleware := TokenMiddleware(s.secret)
 
 	appRouter.Post("/login", s.LogIn)
@@ -86,7 +82,7 @@ func (s *Server) Start() error {
 	})
 	appRouter.Get("/thumbnail/{uuid}.*", s.ThumbnailHandler)
 	appRouter.Get("/full/{uuid}.*", s.FullImageHandler)
-	appRouter.Get("/*", s.wildcardHandler(fs))
+	appRouter.Handle("/*", http.FileServer(s.staticFileSystem))
 
 	isUsingHTTPS := s.httpsPort != ""
 	if isUsingHTTPS {

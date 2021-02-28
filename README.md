@@ -25,9 +25,9 @@ Index all photos and generate a DB for the server to use.
 
                       Path to where photos are stored.
 
--database             /path/to/photos.db
+-data-directory       /path/to/store/data
 
-                      Path where the DB should be created.
+                      Path where application data should be created.
 
 -thumbnails           true|false
 
@@ -48,10 +48,10 @@ Index all photos and generate a DB for the server to use.
 ### Example
 
 ```
-go run main.go index \
-  -photos-directory ~/photo-server-data/FamilyPhotos \
-  -database ~/photo-server-data/photos.db \
-  -thumbnails-directory ~/photo-server-data/thumbs \
+photo-server index \
+  -photos-directory ~/dev/photo-server-data/FamilyPhotos \
+  -data-directory ~/dev/photo-server-data/data \
+  -thumbnails-directory ~/dev/photo-server-data/thumbs \
   -workers 4
 ```
 
@@ -66,9 +66,9 @@ Generate thumbnails for every photo in the datasource.
 
                       Path to where photos are stored.
 
--database             /path/to/photos.db
+-data-directory       /path/to/store/data
 
-                      Path where the DB should be created.
+                      Path where application data should be created.
 
 -thumbnails-directory /path/to/thumbnails
 
@@ -89,9 +89,9 @@ Generate thumbnails for every photo in the datasource.
 ### Example
 
 ```
-go run main.go thumbnails \
+photo-server thumbnails \
   -photos-directory ~/photo-server-data/FamilyPhotos \
-  -database ~/photo-server-data/photos.db \
+  -data-directory ~/photo-server-data/data \
   -thumbnails-directory ~/photo-server-data/thumbs
 ```
 
@@ -106,9 +106,9 @@ Serve the photos web interface over HTTP.
 
                       Path to where photos are stored.
 
--database             /path/to/photos.db
+-data-directory       /path/to/store/data
 
-                      Path where the DB should be created.
+                      Path where application data should be created.
 
 -thumbnails-directory /path/to/thumbnails
 
@@ -148,9 +148,9 @@ Serve the photos web interface over HTTP.
 ### Example
 
 ```
-go run main.go serve \
+photo-server serve \
   -photos-directory ~/photo-server-data/FamilyPhotos \
-  -database ~/photo-server-data/photos.db \
+  -data-directory ~/photo-server-data/data \
   -thumbnails-directory ~/photo-server-data/thumbs \
   -http-port 8080 \
   -https-port 9090 \

@@ -2,12 +2,14 @@ package datasource
 
 import (
 	"fmt"
+	"os"
+	"path"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3" // Import to initialize driver
 	log "github.com/sirupsen/logrus"
 	"github.com/williamhaley/photo-server/model"
-	"os"
 )
 
 // Database is the general concept wrapping the organization of photos.
@@ -17,22 +19,35 @@ type Database struct {
 }
 
 // New allocates a new instance of the datasource.
-func New(db *sqlx.DB) *Database {
+func New(dataDirectory string) *Database {
+	path := path.Join(dataDirectory, "database.db")
+
+	var db *sqlx.DB
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if _, err := os.Create(path); err != nil {
+			log.WithError(err).Fatalf("failed to allocate db %q", path)
+		}
+		db = MustOpen(path)
+		if err := DestructiveReset(db); err != nil {
+			log.WithError(err).Fatalf("failed to set up db %q", path)
+		}
+		log.Info("database created")
+	} else if err != nil {
+		log.WithError(err).Fatalf("failed to get db status %q", path)
+	} else {
+		db = MustOpen(path)
+		log.Info("database opened")
+	}
+
 	return &Database{
 		db: db,
 	}
 }
 
-// MustCreate is used for initial creation of the datasource.
-func MustCreate(path string) *sqlx.DB {
-	_, err := os.Create(path)
-	if err != nil {
-		log.WithError(err).Fatalf("failed to create db %q", path)
-	}
-
-	db := MustOpen(path)
-
-	_, err = db.Exec(`
+func DestructiveReset(db *sqlx.DB) error {
+	_, err := db.Exec(`
+		DROP TABLE IF EXISTS photos;
 		CREATE TABLE photos (
 			uuid VARCHAR(32) PRIMARY KEY,
 			path VARCHAR(512) NOT NULL,
@@ -44,13 +59,13 @@ func MustCreate(path string) *sqlx.DB {
 		CREATE INDEX year_index ON photos(year);
 		CREATE INDEX month_index ON photos(month);
 	`)
-	if err != nil {
-		log.WithError(err).Fatalf("failed to init db schema %q", path)
-	}
 
 	// TODO WFH Index on year, others.
 
-	return db
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // MustOpen opens the DB for API access.

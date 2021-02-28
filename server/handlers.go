@@ -180,13 +180,6 @@ func (s *Server) FullImageHandler(rw http.ResponseWriter, r *http.Request) {
 	return
 }
 
-// wildcardHandler responds to all unhandled requests.
-func (s *Server) wildcardHandler(fileSystemHandler http.Handler) http.HandlerFunc {
-	return func(rw http.ResponseWriter, r *http.Request) {
-		fileSystemHandler.ServeHTTP(rw, r)
-	}
-}
-
 // ThumbnailHandler responds to HTTP requests for image thumbnails.
 func (s *Server) ThumbnailHandler(rw http.ResponseWriter, r *http.Request) {
 	uuid := chi.URLParam(r, "uuid")

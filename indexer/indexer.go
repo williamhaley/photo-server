@@ -1,15 +1,16 @@
 package indexer
 
 import (
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/williamhaley/photo-server/analyzer"
 	"github.com/williamhaley/photo-server/datasource"
 	"github.com/williamhaley/photo-server/model"
 	"github.com/williamhaley/photo-server/thumbnail"
-	"os"
-	"path/filepath"
-	"sync"
-	"time"
 )
 
 type Indexer struct {
